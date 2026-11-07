@@ -3,8 +3,8 @@
   "Id": "pmmopla.retirement-readiness",
   "Guid": "403ee57e-3d4f-432d-8e8b-83ea86030128",
   "Name": "M365 retirement readiness",
-  "Description": "Read-only checks that find what will break when Microsoft retires SMS and voice MFA in Entra ID (1 Feb 2027) and Exchange Web Services in Exchange Online (1 Apr 2027). Built for small and medium businesses.",
-  "Version": "0.1.0",
+  "Description": "Read-only checks that find what will break when Microsoft retires SMS and voice MFA in Entra ID (1 Feb 2027) and Exchange Web Services in Exchange Online (1 Apr 2027), including the tenant EWS setting. Built for small and medium businesses.",
+  "Version": "0.2.0",
   "Publisher": "pmmopla",
   "License": "MIT",
   "Homepage": "https://github.com/pmmopla/maester-pack-retirement",
@@ -20,7 +20,8 @@
   ],
   "Uses": {
     "Services": [
-      "Graph"
+      "Graph",
+      "ExchangeOnline"
     ],
     "GraphScopes": [
       "AuditLog.Read.All",

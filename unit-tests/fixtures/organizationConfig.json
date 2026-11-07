@@ -1,0 +1,7 @@
+{
+  "notSet":      { "EwsEnabled": null,  "EwsAllowedAppIDs": null },
+  "disabled":    { "EwsEnabled": false, "EwsAllowedAppIDs": ["aaaaaaaa-0000-0000-0000-000000000001"] },
+  "emptyList":   { "EwsEnabled": true,  "EwsAllowedAppIDs": [] },
+  "allowList":   { "EwsEnabled": true,  "EwsAllowedAppIDs": ["aaaaaaaa-0000-0000-0000-000000000001", "AAAAAAAA-0000-0000-0000-000000000001", "bbbbbbbb-0000-0000-0000-000000000002"] },
+  "allowString": { "EwsEnabled": "True", "EwsAllowedAppIDs": "{aaaaaaaa-0000-0000-0000-000000000001, bbbbbbbb-0000-0000-0000-000000000002}" }
+}

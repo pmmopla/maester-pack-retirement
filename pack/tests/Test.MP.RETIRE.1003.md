@@ -16,8 +16,9 @@ about, and check the sign-in logs of each app before you remove anything.
 2. Apps that moved: remove the EWS permission in **Entra admin center** > **Enterprise apps** > the app >
    **Permissions**, or in its app registration.
 3. Apps that have not moved: plan the move before 1 April 2027. Until then, an Exchange admin can keep EWS
-   working for them with the tenant's EWS allow list (`EwsEnabled` and `EwsAllowList` in
-   `Set-OrganizationConfig`).
+   working for them by setting `EwsEnabled` to `True` and adding their application IDs to `EwsAllowedAppIDs`
+   in `Set-OrganizationConfig` (MP.RETIRE.1004 checks this setting). The older `EwsAllowList` works on user
+   agents and is not part of the retirement.
 
 #### Related links
 

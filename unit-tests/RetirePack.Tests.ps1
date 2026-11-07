@@ -31,9 +31,35 @@ public class MaesterTest : System.Attribute {
         return $script:Graph[$key]
     }
     function global:Add-MtTestResultDetail {
-        param([string] $Result, [string] $SkippedBecause)
+        param([string] $Result, [string] $SkippedBecause, [switch] $Investigate)
         $script:LastResult = $Result
         $script:LastSkip = $SkippedBecause
+        $script:LastInvestigate = [bool]$Investigate
+    }
+
+    # Exchange Online stand-ins. $script:Exo.OrganizationConfig is what Get-MtExo returns, and
+    # $script:Exo.EwsPolicy what Get-OrganizationConfig -RetrieveEwsOperationAccessPolicy returns. Without
+    # $script:Exo.ModuleCanReadAllowList the stand-in has no such parameter, like an old Exchange module.
+    $script:Exo = @{}
+    function global:Get-MtExo {
+        param([string] $Request)
+        $script:Exo[$Request]
+    }
+    function Set-ExoFixture([string] $Name, [switch] $OldModule) {
+        $fixture = (Read-Fixture organizationConfig).$Name
+        $script:Exo = @{
+            OrganizationConfig = [pscustomobject]@{ EwsEnabled = $fixture.EwsEnabled }
+            EwsPolicy          = [pscustomobject]@{ EwsAllowedAppIDs = $fixture.EwsAllowedAppIDs }
+        }
+        if ($OldModule) {
+            function global:Get-OrganizationConfig { $script:Exo['OrganizationConfig'] }
+        } else {
+            function global:Get-OrganizationConfig {
+                param([switch] $RetrieveEwsOperationAccessPolicy)
+                if ($RetrieveEwsOperationAccessPolicy) { return $script:Exo['EwsPolicy'] }
+                $script:Exo['OrganizationConfig']
+            }
+        }
     }
 
     . (Join-Path $root 'helpers/RetireHelpers.ps1')
@@ -41,7 +67,8 @@ public class MaesterTest : System.Attribute {
 }
 
 AfterAll {
-    Remove-Item function:global:Invoke-MtGraphRequest, function:global:Add-MtTestResultDetail -ErrorAction SilentlyContinue
+    Remove-Item function:global:Invoke-MtGraphRequest, function:global:Add-MtTestResultDetail,
+        function:global:Get-MtExo, function:global:Get-OrganizationConfig -ErrorAction SilentlyContinue
 }
 
 Describe 'Get-RetirePhoneOnlyUser' {
@@ -164,5 +191,80 @@ Describe 'MP.RETIRE.1003 EWS permissions' {
         $script:Graph = @{ exchange = $null }
         $null = Test-RetireEwsPermission
         $script:LastSkip | Should -Be 'NotApplicable'
+    }
+}
+
+Describe 'ConvertTo-RetireAppIdList' {
+    It 'splits a comma-separated string and removes braces' {
+        ConvertTo-RetireAppIdList -Value '{a1, b2}' | Should -Be @('a1', 'b2')
+    }
+    It 'removes duplicates regardless of case' {
+        ConvertTo-RetireAppIdList -Value @('a1', 'A1', 'b2') | Should -Be @('a1', 'b2')
+    }
+    It 'returns nothing for null or empty values' {
+        @(ConvertTo-RetireAppIdList -Value $null).Count | Should -Be 0
+        @(ConvertTo-RetireAppIdList -Value @()).Count | Should -Be 0
+        @(ConvertTo-RetireAppIdList -Value '').Count | Should -Be 0
+    }
+}
+
+Describe 'Get-RetireEwsTenantState' {
+    It 'treats an unset EwsEnabled as open to every app' {
+        (Get-RetireEwsTenantState -EwsEnabled $null).State | Should -Be 'Open'
+    }
+    It 'treats EwsEnabled False as blocked, whatever the list says' {
+        (Get-RetireEwsTenantState -EwsEnabled $false -AllowedAppId 'a1').State | Should -Be 'Blocked'
+    }
+    It 'treats EwsEnabled True with an empty list as blocked' {
+        (Get-RetireEwsTenantState -EwsEnabled $true -AllowedAppId @()).State | Should -Be 'Blocked'
+    }
+    It 'returns the allowed apps for EwsEnabled True with a list' {
+        $state = Get-RetireEwsTenantState -EwsEnabled $true -AllowedAppId 'a1', 'b2'
+        $state.State | Should -Be 'AllowList'
+        $state.AllowedAppId | Should -Be @('a1', 'b2')
+    }
+    It 'reads EwsEnabled given as text' {
+        (Get-RetireEwsTenantState -EwsEnabled 'False').State | Should -Be 'Blocked'
+        (Get-RetireEwsTenantState -EwsEnabled 'True' -AllowedAppId 'a1').State | Should -Be 'AllowList'
+    }
+    It 'says when the allow list could not be read' {
+        (Get-RetireEwsTenantState -EwsEnabled $true -AllowListUnknown).State | Should -Be 'AllowListUnknown'
+    }
+}
+
+Describe 'MP.RETIRE.1004 EWS tenant setting' {
+    BeforeEach { $script:LastInvestigate = $false }
+
+    It 'fails when EwsEnabled is not set' {
+        Set-ExoFixture notSet
+        Test-RetireEwsTenantSetting | Should -BeFalse
+        $script:LastResult | Should -Match '^Every app can still use Exchange Web Services'
+    }
+    It 'passes when EWS is blocked' {
+        Set-ExoFixture disabled
+        Test-RetireEwsTenantSetting | Should -BeTrue
+        $script:LastResult | Should -Match 'EwsEnabled is False'
+    }
+    It 'passes when EWS is on with an empty allow list' {
+        Set-ExoFixture emptyList
+        Test-RetireEwsTenantSetting | Should -BeTrue
+        $script:LastResult | Should -Match 'EwsAllowedAppIDs is empty'
+    }
+    It 'fails and lists each allowed app once' {
+        Set-ExoFixture allowList
+        Test-RetireEwsTenantSetting | Should -BeFalse
+        $script:LastResult | Should -Match '^2 apps are still allowed to use Exchange Web Services'
+        $script:LastResult | Should -Match 'bbbbbbbb-0000-0000-0000-000000000002'
+    }
+    It 'reads the allow list when Exchange returns it as one string' {
+        Set-ExoFixture allowString
+        Test-RetireEwsTenantSetting | Should -BeFalse
+        $script:LastResult | Should -Match '^2 apps are still allowed'
+    }
+    It 'asks to investigate when the Exchange module cannot read the allow list' {
+        Set-ExoFixture allowList -OldModule
+        Test-RetireEwsTenantSetting | Should -BeFalse
+        $script:LastInvestigate | Should -BeTrue
+        $script:LastResult | Should -Match 'cannot read the allowed app list'
     }
 }

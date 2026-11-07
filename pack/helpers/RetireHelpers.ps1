@@ -255,3 +255,106 @@ function Get-RetireDaysUntil {
 
     [int][math]::Floor(($Date.Date - $Now.Date).TotalDays)
 }
+
+function ConvertTo-RetireAppIdList {
+    <#
+    .SYNOPSIS
+    Turns the EwsAllowedAppIDs value of Get-OrganizationConfig into a clean list of application IDs.
+
+    .DESCRIPTION
+    Exchange Online can return the list as a collection or as one comma-separated string. Both are split,
+    trimmed and de-duplicated. Returns nothing for $null or an empty value.
+    #>
+    [CmdletBinding()]
+    [OutputType([string[]])]
+    param(
+        [AllowNull()]
+        [object] $Value
+    )
+
+    if ($null -eq $Value) { return }
+    $seen = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($item in @($Value)) {
+        foreach ($part in (([string]$item) -split '[,;\s]+')) {
+            $id = $part.Trim().Trim([char[]]'{}"''')
+            if ($id -and $seen.Add($id)) { $id }
+        }
+    }
+}
+
+function Get-RetireEwsTenantState {
+    <#
+    .SYNOPSIS
+    Decides what the tenant's Exchange Web Services settings allow, from EwsEnabled and EwsAllowedAppIDs.
+
+    .DESCRIPTION
+    Follows Microsoft's description of EwsEnabled from October 2026:
+    - $null (not set): every app can use EWS. Microsoft changes it to False as the rollout reaches the tenant,
+      and setting it back to $null is Microsoft's documented workaround, so it can still be seen.
+    - $true: only the apps in EwsAllowedAppIDs can use EWS; an empty list allows none.
+    - $false: EWS is blocked for the whole tenant.
+
+    Returns an object with State (Open, AllowList, AllowListUnknown or Blocked), Reason and AllowedAppId.
+
+    .PARAMETER EwsEnabled
+    The EwsEnabled value of Get-OrganizationConfig.
+
+    .PARAMETER AllowedAppId
+    The application IDs in EwsAllowedAppIDs.
+
+    .PARAMETER AllowListUnknown
+    The allow list could not be read, for example because the Exchange Online module is too old.
+    #>
+    [CmdletBinding()]
+    [OutputType([pscustomobject])]
+    param(
+        [AllowNull()]
+        [object] $EwsEnabled,
+
+        [AllowNull()]
+        [AllowEmptyCollection()]
+        [string[]] $AllowedAppId = @(),
+
+        [switch] $AllowListUnknown
+    )
+
+    $enabled = $EwsEnabled
+    if ($enabled -is [string]) {
+        $enabled = switch ($enabled.Trim()) { 'True' { $true } 'False' { $false } default { $null } }
+    }
+    $ids = @($AllowedAppId | Where-Object { $_ })
+
+    if ($null -eq $enabled) {
+        return [pscustomobject]@{ State = 'Open'; Reason = 'EwsEnabled is not set'; AllowedAppId = @() }
+    }
+    if (-not [bool]$enabled) {
+        return [pscustomobject]@{ State = 'Blocked'; Reason = 'EwsEnabled is False'; AllowedAppId = @() }
+    }
+    if ($AllowListUnknown) {
+        return [pscustomobject]@{ State = 'AllowListUnknown'; Reason = 'EwsEnabled is True and the allow list could not be read'; AllowedAppId = @() }
+    }
+    if ($ids.Count -eq 0) {
+        return [pscustomobject]@{ State = 'Blocked'; Reason = 'EwsEnabled is True and EwsAllowedAppIDs is empty'; AllowedAppId = @() }
+    }
+    [pscustomobject]@{ State = 'AllowList'; Reason = 'EwsEnabled is True with EwsAllowedAppIDs'; AllowedAppId = $ids }
+}
+
+function Format-RetireAppIdTable {
+    <#
+    .SYNOPSIS
+    A Markdown table of application IDs.
+    #>
+    [CmdletBinding()]
+    [OutputType([string])]
+    param(
+        [Parameter(Mandatory)]
+        [AllowEmptyCollection()]
+        [string[]] $AppId
+    )
+
+    $lines = [System.Collections.Generic.List[string]]::new()
+    $lines.Add('| Allowed application ID |')
+    $lines.Add('| --- |')
+    foreach ($id in $AppId) { $lines.Add("| $(ConvertTo-RetireMarkdownCell $id) |") }
+    $lines -join "`n"
+}
