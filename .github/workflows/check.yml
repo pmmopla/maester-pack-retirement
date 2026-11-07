@@ -1,0 +1,52 @@
+# Checks the pack on every push and pull request: the manifest and content checks that Install-MtPack runs
+# (Test-MtPack), every test once through the engine (Invoke-MtTest -Path), and the unit tests (Pester),
+# which replace Microsoft Graph with the JSON files in unit-tests/fixtures. No tenant is needed.
+name: Check pack
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Maester and Pester
+        shell: pwsh
+        run: |
+          Install-PSResource -Name Maester -Prerelease -TrustRepository -Quiet
+          Install-PSResource -Name Pester -TrustRepository -Quiet
+
+      - name: Check the pack
+        shell: pwsh
+        run: |
+          Import-Module Maester
+          $check = Test-MtPack ./pack
+          $check | Format-List Id, Version, IsValid, Risk, Errors, Warnings, Findings
+          if (-not $check.IsValid) { throw 'The pack is not valid.' }
+          if ($check.Risk -eq 'High') { throw 'The content checks rate the pack High risk.' }
+
+      - name: Run the tests through the engine
+        shell: pwsh
+        run: |
+          Import-Module Maester
+          $results = @(Invoke-MtTest -Path ./pack)
+          $results | Format-Table Id, Result, ReasonCode -AutoSize | Out-String -Width 200
+          $broken = @($results | Where-Object ReasonCode -In 'InvalidMetadata', 'InvalidReturn', 'InvalidConfiguration')
+          if ($broken) { throw "The engine could not run $($broken.Count) test(s): $($broken.Id -join ', ')" }
+
+      - name: Run the unit tests
+        shell: pwsh
+        run: |
+          $config = New-PesterConfiguration
+          $config.Run.Path = './unit-tests'
+          $config.Run.Exit = $true
+          $config.Output.Verbosity = 'Detailed'
+          Invoke-Pester -Configuration $config

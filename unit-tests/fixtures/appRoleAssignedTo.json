@@ -1,0 +1,4 @@
+[
+  { "id": "a1", "appRoleId": "dc890d15-9560-4a4c-9b7f-a736ec74ec40", "principalId": "sp-backup",  "principalDisplayName": "Old Backup Tool", "resourceId": "exo-sp" },
+  { "id": "a2", "appRoleId": "11111111-2222-3333-4444-555555555555", "principalId": "sp-other",   "principalDisplayName": "Mail Reader",     "resourceId": "exo-sp" }
+]

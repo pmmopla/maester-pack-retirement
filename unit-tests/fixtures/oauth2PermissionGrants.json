@@ -1,0 +1,6 @@
+[
+  { "id": "g1", "clientId": "sp-crm",    "consentType": "AllPrincipals", "resourceId": "exo-sp",   "scope": "EWS.AccessAsUser.All" },
+  { "id": "g2", "clientId": "sp-crm",    "consentType": "Principal",     "resourceId": "graph-sp", "principalId": "u1", "scope": "User.Read EWS.AccessAsUser.All" },
+  { "id": "g3", "clientId": "sp-portal", "consentType": "AllPrincipals", "resourceId": "graph-sp", "scope": "User.Read Mail.Read" },
+  { "id": "g4", "clientId": "sp-backup", "consentType": "Principal",     "resourceId": "exo-sp",   "principalId": "u2", "scope": " EWS.AccessAsUser.All  " }
+]

@@ -1,0 +1,10 @@
+[
+  { "id": "u1", "userPrincipalName": "amy@contoso.com",   "userDisplayName": "Amy",   "userType": "member", "isAdmin": false, "methodsRegistered": ["mobilePhone"] },
+  { "id": "u2", "userPrincipalName": "ben@contoso.com",   "userDisplayName": "Ben",   "userType": "member", "isAdmin": false, "methodsRegistered": ["mobilePhone", "microsoftAuthenticatorPush"] },
+  { "id": "u3", "userPrincipalName": "cara@contoso.com",  "userDisplayName": "Cara",  "userType": "member", "isAdmin": true,  "methodsRegistered": ["mobilePhone", "email"] },
+  { "id": "u4", "userPrincipalName": "dan@contoso.com",   "userDisplayName": "Dan",   "userType": "member", "isAdmin": true,  "methodsRegistered": ["passKeyDeviceBound"] },
+  { "id": "u5", "userPrincipalName": "eve_ext#EXT#@contoso.com", "userDisplayName": "Eve", "userType": "guest", "isAdmin": false, "methodsRegistered": ["officePhone"] },
+  { "id": "u6", "userPrincipalName": "fay@contoso.com",   "userDisplayName": "Fay",   "userType": "member", "isAdmin": false, "methodsRegistered": [] },
+  { "id": "u7", "userPrincipalName": "gus@contoso.com",   "userDisplayName": "Gus",   "userType": "member", "isAdmin": false, "methodsRegistered": ["alternateMobilePhone", "securityQuestion", "officePhone"] },
+  { "id": "u8", "userPrincipalName": "hal|pipe@contoso.com", "userDisplayName": "Hal", "userType": "member", "isAdmin": false, "methodsRegistered": ["email"] }
+]

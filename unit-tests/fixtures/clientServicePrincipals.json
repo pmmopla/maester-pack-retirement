@@ -1,0 +1,6 @@
+[
+  { "id": "sp-backup", "appId": "aaaa-backup", "displayName": "Old Backup Tool" },
+  { "id": "sp-crm",    "appId": "bbbb-crm",    "displayName": "Contoso CRM" },
+  { "id": "sp-portal", "appId": "cccc-portal", "displayName": "Staff Portal" },
+  { "id": "sp-other",  "appId": "dddd-other",  "displayName": "Mail Reader" }
+]
