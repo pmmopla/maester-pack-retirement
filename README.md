@@ -5,10 +5,10 @@ businesses still depend on:
 
 | Date | What Microsoft retires | Checked by |
 | --- | --- | --- |
-| 1 February 2027 | Microsoft-provided SMS and voice MFA in Microsoft Entra ID | MP.RETIRE.1001, MP.RETIRE.1002 |
+| 1 February 2027 (1 July 2027 for Global Administrators and external users) | Microsoft-provided SMS and voice MFA in Microsoft Entra ID | MP.RETIRE.1001, MP.RETIRE.1002, MP.RETIRE.1005 |
 | 1 April 2027 | Exchange Web Services (EWS) in Exchange Online (off by default since 1 October 2026) | MP.RETIRE.1003, MP.RETIRE.1004 |
 
-> **Status: preview (0.2.0).** The checks are unit-tested against sample Microsoft Graph responses, but they
+> **Status: preview (0.3.0).** The checks are unit-tested against sample Microsoft Graph responses, but they
 > have not yet been run against many real tenants. If you run them, please
 > [open an issue](https://github.com/pmmopla/maester-pack-retirement/issues) with what you saw (no tenant data,
 > please) — that is the most useful contribution right now.
@@ -18,7 +18,7 @@ businesses still depend on:
 You need [Maester](https://maester.dev) 3.0 or later (packs are in the 3.0 preview).
 
 ```powershell
-Install-Module Maester -AllowPrerelease -Scope CurrentUser
+Install-PSResource -Name Maester -Prerelease
 Install-MtPack pmmopla/maester-pack-retirement/pack
 Connect-Maester -Service Graph, ExchangeOnline
 Invoke-Maester -Pack RETIRE -SkipBuiltIn
@@ -33,6 +33,7 @@ The pack changes nothing in your tenant. It reads Microsoft Graph and Exchange O
 | `AuditLog.Read.All` | MP.RETIRE.1001, MP.RETIRE.1002 (user registration details) |
 | `Application.Read.All` | MP.RETIRE.1003 (service principals and app role assignments) |
 | `DelegatedPermissionGrant.Read.All` | MP.RETIRE.1003 (delegated permission grants) |
+| `Policy.Read.All` | MP.RETIRE.1005 (Authentication methods policy) |
 | Exchange Online **View-Only Configuration** role | MP.RETIRE.1004 (`Get-OrganizationConfig`) |
 
 MP.RETIRE.1001 and 1002 are declared as needing Microsoft Entra ID P1 or better (included in Microsoft 365
@@ -47,6 +48,7 @@ tenants without it.
 | MP.RETIRE.1002 | No admin relies only on SMS or voice for MFA | High |
 | MP.RETIRE.1003 | No app still holds Exchange Web Services permissions | Medium |
 | MP.RETIRE.1004 | No app is still allowed to use Exchange Web Services (tenant setting) | Medium |
+| MP.RETIRE.1005 | Passkeys (FIDO2) are turned on for all users | Medium |
 
 Settings you can change in `maester-config.json`:
 
@@ -71,6 +73,12 @@ It lists apps that hold `full_access_as_app` on Office 365 Exchange Online or a 
 `EWS.AccessAsUser.All`. Holding a permission does not prove an app still calls EWS, so treat the list as the
 apps to ask about, not the apps to delete.
 
+### What MP.RETIRE.1005 checks
+
+Whether users can register the method that replaces SMS and voice: the **Passkey (FIDO2)** method in the
+Authentication methods policy. It passes when the method is on for all users, asks you to investigate when it
+is on for some groups only, and fails when it is off. It also says when SMS or voice is still turned on.
+
 ### What MP.RETIRE.1004 checks
 
 The tenant setting that decides which apps can still use EWS until 1 April 2027: `EwsEnabled` and the
@@ -82,9 +90,12 @@ retirement and is not read. With an Exchange Online module too old to read the a
 
 ## Roadmap
 
-- SMTP AUTH: mailboxes and apps still using Basic authentication for client submission (needs an Exchange
-  Online connection).
+- Tell Global Administrators and external users (1 July 2027) apart from everyone else (1 February 2027) in
+  the user lists.
 - Users enabled for SMS or voice in the authentication methods policy who have not registered a passkey yet.
+- SMTP AUTH Basic authentication (off by default from the end of December 2026; Microsoft has not set the
+  final removal date yet). Maester's built-in tests already check the tenant switch, so this pack will only
+  add what they do not cover.
 
 ## Develop
 
@@ -95,7 +106,7 @@ JSON files, so they need no tenant:
 Install-Module Pester -MinimumVersion 5.0 -Scope CurrentUser
 Invoke-Pester ./unit-tests
 
-Install-Module Maester -AllowPrerelease -Scope CurrentUser
+Install-PSResource -Name Maester -Prerelease
 Test-MtPack ./pack
 Invoke-MtTest -Path ./pack
 ```

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://maester.dev/schemas/maester-pack-guide-1.0.json",
+  "Summary": "Finds the users and apps that stop working when Microsoft retires SMS and voice MFA in Entra ID and Exchange Web Services in Exchange Online. Read-only.",
+  "Prerequisites": [
+    {
+      "Text": "Maester 3.0 or later.",
+      "Command": "Install-PSResource -Name Maester -Prerelease"
+    }
+  ],
+  "Connect": {
+    "Steps": [
+      {
+        "Text": "Connect Maester to Microsoft Graph and Exchange Online.",
+        "Command": "Connect-Maester -Service Graph, ExchangeOnline"
+      }
+    ],
+    "Notes": [
+      "Without an Exchange Online connection, MP.RETIRE.1004 is skipped and the other checks still run.",
+      "MP.RETIRE.1001 and MP.RETIRE.1002 need Microsoft Entra ID P1 or better; Maester skips them without it."
+    ]
+  },
+  "Run": {
+    "Commands": [
+      {
+        "Text": "Only the retirement checks",
+        "Command": "Invoke-Maester -Pack RETIRE -SkipBuiltIn"
+      },
+      {
+        "Text": "Maester's tests and the retirement checks",
+        "Command": "Invoke-Maester -Pack RETIRE"
+      }
+    ],
+    "Options": [
+      {
+        "Name": "MP.RETIRE.1001 MaximumRows",
+        "Default": "50",
+        "Text": "The most users to list in the result."
+      },
+      {
+        "Name": "MP.RETIRE.1001 IncludeGuests",
+        "Default": "false",
+        "Text": "Also check guest users."
+      },
+      {
+        "Name": "MP.RETIRE.1002 MaximumRows",
+        "Default": "50",
+        "Text": "The most admins to list in the result."
+      }
+    ],
+    "More": "https://github.com/pmmopla/maester-pack-retirement#the-checks"
+  }
+}

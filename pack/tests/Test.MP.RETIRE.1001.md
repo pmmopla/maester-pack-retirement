@@ -1,11 +1,12 @@
 Microsoft is retiring Microsoft-provided SMS and voice for multifactor authentication in Microsoft Entra ID.
-Passkeys became the default on 1 September 2026, and SMS and voice are fully retired on 1 February 2027.
-After that date, a user whose only MFA method is a phone number gets a blocking prompt to register a passkey
-before they can sign in.
+Passkeys became the default on 1 September 2026. SMS and voice are retired on 1 February 2027 for all users
+except Global Administrators and external users, and on 1 July 2027 for Global Administrators and external
+users. After their date, a user whose only MFA method is a phone number gets a blocking prompt to register a
+passkey before they can sign in. There is no opt-out from either date.
 
 This test lists the users whose only registered MFA methods are phone methods (`mobilePhone`,
 `alternateMobilePhone`, `officePhone`). Email and security questions are ignored, because they cannot satisfy
-MFA. Guests are left out unless you set `IncludeGuests`.
+MFA. Guests are left out unless you set `IncludeGuests`; the **Type** column tells members and guests apart.
 
 ```json
 {

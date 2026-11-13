@@ -32,15 +32,13 @@ function Test-RetirePhoneOnlyUser {
 
     $details = @(Invoke-MtGraphRequest -RelativeUri 'reports/authenticationMethods/userRegistrationDetails')
     $phoneOnly = @(Get-RetirePhoneOnlyUser -RegistrationDetail $details -IncludeGuests:$IncludeGuests)
-    $days = Get-RetireDaysUntil -Date '2027-02-01'
 
     if ($phoneOnly.Count -eq 0) {
         Add-MtTestResultDetail -Result "Well done. None of the $($details.Count) users checked relies only on SMS or voice for MFA."
         return $true
     }
 
-    $when = if ($days -ge 0) { "in $days days (1 February 2027)" } else { 'since 1 February 2027' }
-    $result = "$($phoneOnly.Count) of $($details.Count) users rely only on SMS or voice for MFA. Microsoft-provided SMS and voice are retired $when; after that these users must register a passkey before they can sign in.`n`n" +
+    $result = "$($phoneOnly.Count) of $($details.Count) users rely only on SMS or voice for MFA. $(Get-RetireSmsDeadlineText) After that, these users must register a passkey before they can sign in.`n`n" +
         (Format-RetireUserTable -User $phoneOnly -MaximumRows $MaximumRows)
     Add-MtTestResultDetail -Result $result
     return $false

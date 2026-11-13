@@ -70,6 +70,7 @@ function Get-RetirePhoneOnlyUser {
                 id                = $user.id
                 userPrincipalName = $user.userPrincipalName
                 displayName       = $user.userDisplayName
+                userType          = [string]$user.userType
                 isAdmin           = [bool]$user.isAdmin
                 methods           = ($methods -join ', ')
             }
@@ -204,11 +205,11 @@ function Format-RetireUserTable {
     )
 
     $lines = [System.Collections.Generic.List[string]]::new()
-    $lines.Add('| User | Admin | Registered methods |')
-    $lines.Add('| --- | --- | --- |')
+    $lines.Add('| User | Type | Admin | Registered methods |')
+    $lines.Add('| --- | --- | --- | --- |')
     foreach ($u in ($User | Select-Object -First $MaximumRows)) {
         $admin = if ($u.isAdmin) { 'Yes' } else { 'No' }
-        $lines.Add("| $(ConvertTo-RetireMarkdownCell $u.userPrincipalName) | $admin | $(ConvertTo-RetireMarkdownCell $u.methods) |")
+        $lines.Add("| $(ConvertTo-RetireMarkdownCell $u.userPrincipalName) | $(ConvertTo-RetireMarkdownCell $u.userType) | $admin | $(ConvertTo-RetireMarkdownCell $u.methods) |")
     }
     if ($User.Count -gt $MaximumRows) {
         $lines.Add('')
@@ -357,4 +358,62 @@ function Format-RetireAppIdTable {
     $lines.Add('| --- |')
     foreach ($id in $AppId) { $lines.Add("| $(ConvertTo-RetireMarkdownCell $id) |") }
     $lines -join "`n"
+}
+
+function Get-RetireSmsDeadlineText {
+    <#
+    .SYNOPSIS
+    One sentence with the two retirement dates of Microsoft-provided SMS and voice, and the days left to each.
+
+    .DESCRIPTION
+    Microsoft retires its SMS and voice delivery in two waves: 1 February 2027 for all users except Global
+    Administrators and external users, and 1 July 2027 for Global Administrators and external users.
+    #>
+    [CmdletBinding()]
+    [OutputType([string])]
+    param(
+        [datetime] $Now = [datetime]::UtcNow
+    )
+
+    $first = Get-RetireDaysUntil -Date '2027-02-01' -Now $Now
+    $second = Get-RetireDaysUntil -Date '2027-07-01' -Now $Now
+    $firstText = if ($first -ge 0) { "on 1 February 2027 (in $first days)" } else { 'since 1 February 2027' }
+    $secondText = if ($second -ge 0) { "on 1 July 2027 (in $second days)" } else { 'since 1 July 2027' }
+    "Microsoft-provided SMS and voice are retired $firstText for most users, and $secondText for Global Administrators and external users."
+}
+
+function Get-RetirePasskeyPolicyState {
+    <#
+    .SYNOPSIS
+    Reads the Authentication methods policy and says whether users can register a passkey (FIDO2).
+
+    .PARAMETER Policy
+    The object from GET /policies/authenticationMethodsPolicy.
+
+    .OUTPUTS
+    An object with State (Disabled, SomeUsers or AllUsers), GroupCount (groups the passkey method targets when
+    State is SomeUsers) and PhoneMethod (the phone methods still turned on: Sms, Voice).
+    #>
+    [CmdletBinding()]
+    [OutputType([pscustomobject])]
+    param(
+        [AllowNull()]
+        [object] $Policy
+    )
+
+    $configs = @($Policy.authenticationMethodConfigurations)
+    $fido = $configs | Where-Object { $_.id -eq 'Fido2' } | Select-Object -First 1
+    $phone = @($configs | Where-Object { $_.id -in 'Sms', 'Voice' -and $_.state -eq 'enabled' } | ForEach-Object { [string]$_.id })
+    $targets = @($fido.includeTargets | Where-Object { $null -ne $_ })
+
+    $state = 'Disabled'
+    if ($fido -and $fido.state -eq 'enabled') {
+        $state = if (@($targets | Where-Object { $_.id -eq 'all_users' }).Count -gt 0) { 'AllUsers' } else { 'SomeUsers' }
+    }
+
+    [pscustomobject]@{
+        State       = $state
+        GroupCount  = if ($state -eq 'SomeUsers') { $targets.Count } else { 0 }
+        PhoneMethod = $phone
+    }
 }

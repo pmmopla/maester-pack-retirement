@@ -1,6 +1,6 @@
 Admins should use a phishing-resistant method such as a passkey, Windows Hello for Business or a FIDO2
-security key. SMS and voice are among the weakest MFA methods, and Microsoft-provided SMS and voice are fully
-retired in Microsoft Entra ID on 1 February 2027.
+security key. SMS and voice are among the weakest MFA methods, and Microsoft-provided SMS and voice are retired
+in Microsoft Entra ID on 1 February 2027 (1 July 2027 for Global Administrators and external users).
 
 This test lists the users that Microsoft Graph reports as admins (`isAdmin`) whose only registered MFA
 methods are phone methods. Guest admins are included.

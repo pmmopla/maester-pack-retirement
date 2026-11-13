@@ -268,3 +268,72 @@ Describe 'MP.RETIRE.1004 EWS tenant setting' {
         $script:LastResult | Should -Match 'cannot read the allowed app list'
     }
 }
+
+Describe 'Get-RetireSmsDeadlineText' {
+    It 'names both dates and counts the days left' {
+        $text = Get-RetireSmsDeadlineText -Now ([datetime]'2027-01-22')
+        $text | Should -Match 'on 1 February 2027 \(in 10 days\) for most users'
+        $text | Should -Match 'on 1 July 2027 \(in 160 days\) for Global Administrators and external users'
+    }
+    It 'switches to "since" after each date' {
+        Get-RetireSmsDeadlineText -Now ([datetime]'2027-03-01') | Should -Match 'since 1 February 2027 for most users, and on 1 July 2027'
+        Get-RetireSmsDeadlineText -Now ([datetime]'2027-08-01') | Should -Match 'since 1 July 2027'
+    }
+}
+
+Describe 'Format-RetireUserTable' {
+    It 'shows whether each user is a member or a guest' {
+        $users = @(Get-RetirePhoneOnlyUser -RegistrationDetail @(Read-Fixture userRegistrationDetails) -IncludeGuests)
+        $table = Format-RetireUserTable -User $users
+        $table | Should -Match '\| User \| Type \| Admin \| Registered methods \|'
+        $table | Should -Match '\| amy@contoso.com \| member \|'
+        $table | Should -Match '\| guest \|'
+    }
+}
+
+Describe 'Get-RetirePasskeyPolicyState' {
+    It 'reads <Name> as <Expected>' -ForEach @(
+        @{ Name = 'allUsers'; Expected = 'AllUsers'; Groups = 0; Phone = 0 }
+        @{ Name = 'allUsersWithPhone'; Expected = 'AllUsers'; Groups = 0; Phone = 2 }
+        @{ Name = 'someGroups'; Expected = 'SomeUsers'; Groups = 2; Phone = 1 }
+        @{ Name = 'disabled'; Expected = 'Disabled'; Groups = 0; Phone = 1 }
+        @{ Name = 'missing'; Expected = 'Disabled'; Groups = 0; Phone = 1 }
+    ) {
+        $result = Get-RetirePasskeyPolicyState -Policy (Read-Fixture authenticationMethodsPolicy).$Name
+        $result.State | Should -Be $Expected
+        $result.GroupCount | Should -Be $Groups
+        @($result.PhoneMethod).Count | Should -Be $Phone
+    }
+    It 'treats a missing policy as turned off' {
+        (Get-RetirePasskeyPolicyState -Policy $null).State | Should -Be 'Disabled'
+    }
+}
+
+Describe 'MP.RETIRE.1005 passkey policy' {
+    BeforeEach { $script:LastInvestigate = $false }
+
+    It 'passes when passkeys are on for all users' {
+        $script:Graph = @{ 'policies/authenticationMethodsPolicy' = (Read-Fixture authenticationMethodsPolicy).allUsers }
+        Test-RetirePasskeyPolicy | Should -BeTrue
+        $script:LastResult | Should -Match '^Well done'
+        $script:LastResult | Should -Not -Match 'Still turned on'
+    }
+    It 'passes and says when SMS and voice are still on' {
+        $script:Graph = @{ 'policies/authenticationMethodsPolicy' = (Read-Fixture authenticationMethodsPolicy).allUsersWithPhone }
+        Test-RetirePasskeyPolicy | Should -BeTrue
+        $script:LastResult | Should -Match 'Still turned on in the policy: Sms, Voice\.'
+    }
+    It 'asks to investigate when passkeys are on for some groups only' {
+        $script:Graph = @{ 'policies/authenticationMethodsPolicy' = (Read-Fixture authenticationMethodsPolicy).someGroups }
+        Test-RetirePasskeyPolicy | Should -BeFalse
+        $script:LastInvestigate | Should -BeTrue
+        $script:LastResult | Should -Match '^Passkeys \(FIDO2\) are turned on for 2 groups only'
+    }
+    It 'fails when passkeys are turned off' {
+        $script:Graph = @{ 'policies/authenticationMethodsPolicy' = (Read-Fixture authenticationMethodsPolicy).disabled }
+        Test-RetirePasskeyPolicy | Should -BeFalse
+        $script:LastInvestigate | Should -BeFalse
+        $script:LastResult | Should -Match '^Passkeys \(FIDO2\) are turned off'
+        $script:LastResult | Should -Match '1 July 2027'
+    }
+}

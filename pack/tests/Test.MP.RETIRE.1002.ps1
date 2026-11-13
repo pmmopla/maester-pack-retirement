@@ -36,7 +36,7 @@ function Test-RetirePhoneOnlyAdmin {
         return $true
     }
 
-    $result = "$($phoneOnly.Count) of $($admins.Count) admins rely only on SMS or voice for MFA. SMS and voice can be intercepted or redirected, and Microsoft-provided SMS and voice are retired on 1 February 2027.`n`n" +
+    $result = "$($phoneOnly.Count) of $($admins.Count) admins rely only on SMS or voice for MFA. SMS and voice can be intercepted or redirected. $(Get-RetireSmsDeadlineText)`n`n" +
         (Format-RetireUserTable -User $phoneOnly -MaximumRows $MaximumRows)
     Add-MtTestResultDetail -Result $result
     return $false

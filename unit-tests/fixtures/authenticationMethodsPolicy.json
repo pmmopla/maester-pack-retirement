@@ -1,0 +1,41 @@
+{
+  "allUsers": {
+    "id": "authenticationMethodsPolicy",
+    "authenticationMethodConfigurations": [
+      { "id": "Fido2", "state": "enabled", "includeTargets": [ { "targetType": "group", "id": "all_users", "isRegistrationRequired": false } ] },
+      { "id": "MicrosoftAuthenticator", "state": "enabled", "includeTargets": [ { "targetType": "group", "id": "all_users" } ] },
+      { "id": "Sms", "state": "disabled", "includeTargets": [] },
+      { "id": "Voice", "state": "disabled", "includeTargets": [] }
+    ]
+  },
+  "allUsersWithPhone": {
+    "id": "authenticationMethodsPolicy",
+    "authenticationMethodConfigurations": [
+      { "id": "Fido2", "state": "enabled", "includeTargets": [ { "targetType": "group", "id": "all_users" } ] },
+      { "id": "Sms", "state": "enabled", "includeTargets": [ { "targetType": "group", "id": "all_users" } ] },
+      { "id": "Voice", "state": "enabled", "includeTargets": [ { "targetType": "group", "id": "all_users" } ] }
+    ]
+  },
+  "someGroups": {
+    "id": "authenticationMethodsPolicy",
+    "authenticationMethodConfigurations": [
+      { "id": "Fido2", "state": "enabled", "includeTargets": [
+        { "targetType": "group", "id": "11111111-0000-0000-0000-000000000001" },
+        { "targetType": "group", "id": "11111111-0000-0000-0000-000000000002" } ] },
+      { "id": "Sms", "state": "enabled", "includeTargets": [ { "targetType": "group", "id": "all_users" } ] }
+    ]
+  },
+  "disabled": {
+    "id": "authenticationMethodsPolicy",
+    "authenticationMethodConfigurations": [
+      { "id": "Fido2", "state": "disabled", "includeTargets": [ { "targetType": "group", "id": "all_users" } ] },
+      { "id": "Sms", "state": "enabled", "includeTargets": [ { "targetType": "group", "id": "all_users" } ] }
+    ]
+  },
+  "missing": {
+    "id": "authenticationMethodsPolicy",
+    "authenticationMethodConfigurations": [
+      { "id": "Sms", "state": "enabled", "includeTargets": [] }
+    ]
+  }
+}
